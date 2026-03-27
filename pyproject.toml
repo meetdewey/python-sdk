@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "dewey"
+version = "1.0.0"
+description = "Python client for the Dewey API"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+dependencies = []
+
+[project.urls]
+Homepage = "https://meetdewey.com"
+Repository = "https://github.com/deweyapp/dewey-py"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["dewey*"]
