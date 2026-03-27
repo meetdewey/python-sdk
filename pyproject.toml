@@ -13,7 +13,7 @@ dependencies = []
 
 [project.urls]
 Homepage = "https://meetdewey.com"
-Repository = "https://github.com/deweyapp/dewey-py"
+Repository = "https://github.com/deweyapp/python-sdk"
 
 [tool.setuptools.packages.find]
 where = ["."]
