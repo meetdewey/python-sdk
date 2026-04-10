@@ -61,11 +61,25 @@ DeweyClient(api_key: str, base_url: str = "https://api.meetdewey.com/v1")
 | `update(collection_id, *, name, visibility, ...)` | Update |
 | `delete(collection_id)` | Delete |
 
+`update()` accepts: `name`, `visibility`, `chunk_size`, `chunk_overlap`, `description`, `enable_summarization`, `enable_captioning`, `llm_model`, `instructions`. `llm_model` and `instructions` accept `None` to clear the field; omit them entirely to leave unchanged.
+
+```python
+# Set research instructions for a collection
+client.collections.update(
+    collection_id,
+    instructions="All figures are in USD unless stated otherwise.",
+)
+
+# Clear instructions
+client.collections.update(collection_id, instructions=None)
+```
+
 ### `client.documents`
 
 | Method | Description |
 |---|---|
 | `upload(collection_id, file, *, filename, content_type, ...)` | Multipart upload |
+| `upload_many(collection_id, files, *, concurrency, on_progress)` | Bulk upload via presigned S3 URLs |
 | `request_upload_url(collection_id, filename, content_type, file_size_bytes, content_hash)` | Presigned URL |
 | `confirm(collection_id, document_id)` | Confirm presigned upload |
 | `list(collection_id)` | List documents |
@@ -75,6 +89,31 @@ DeweyClient(api_key: str, base_url: str = "https://api.meetdewey.com/v1")
 | `delete(collection_id, document_id)` | Delete document |
 
 `upload()` accepts a `pathlib.Path`, `bytes`, or any binary file-like object.
+
+`upload_many()` is the recommended approach for large datasets. Each file is uploaded directly to S3 (bypassing the API server), so there are no payload-size limits. Files that match an existing document's hash are deduplicated automatically.
+
+```python
+from pathlib import Path
+
+docs = client.documents.upload_many(
+    collection_id,
+    list(Path("./reports").glob("**/*.pdf")),
+    concurrency=10,
+    on_progress=lambda doc, n, total: print(f"{n}/{total} {doc.filename}"),
+)
+```
+
+Pass `UploadManyItem` instances when you need a custom filename or content type:
+
+```python
+from dewey.resources.documents import UploadManyItem
+from io import BytesIO
+
+items = [
+    UploadManyItem(file=BytesIO(data), filename="custom-name.pdf", content_type="application/pdf"),
+]
+docs = client.documents.upload_many(collection_id, items)
+```
 
 ### `client.sections`
 
@@ -122,8 +161,12 @@ except DeweyError as e:
 
 ## Presigned upload flow
 
+For single files or when you need manual control, use the low-level presigned URL flow. For bulk ingestion, prefer `upload_many()` which handles this automatically with concurrency.
+
 ```python
 import hashlib
+import urllib.request
+from pathlib import Path
 
 data = Path("file.pdf").read_bytes()
 content_hash = hashlib.sha256(data).hexdigest()
@@ -137,8 +180,7 @@ resp = client.documents.request_upload_url(
     content_hash=content_hash,
 )
 
-# 2. PUT bytes directly to S3 (no auth header)
-import urllib.request
+# 2. PUT bytes directly to S3 (no auth header needed)
 req = urllib.request.Request(resp.uploadUrl, data=data, method="PUT")
 req.add_header("Content-Type", "application/pdf")
 urllib.request.urlopen(req)

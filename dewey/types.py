@@ -20,6 +20,12 @@ class Collection:
     embeddingModel: str
     description: Optional[str]
     descriptionDocCount: Optional[int]
+    enableSummarization: bool
+    enableCaptioning: bool
+    llmModel: Optional[str]
+    lastSummarizationModel: Optional[str]
+    lastCaptioningModel: Optional[str]
+    instructions: Optional[str]
     createdAt: str
     deletedAt: Optional[str]
 
@@ -35,6 +41,12 @@ class Collection:
             embeddingModel=d["embeddingModel"],
             description=d.get("description"),
             descriptionDocCount=d.get("descriptionDocCount"),
+            enableSummarization=d.get("enableSummarization", True),
+            enableCaptioning=d.get("enableCaptioning", True),
+            llmModel=d.get("llmModel"),
+            lastSummarizationModel=d.get("lastSummarizationModel"),
+            lastCaptioningModel=d.get("lastCaptioningModel"),
+            instructions=d.get("instructions"),
             createdAt=d["createdAt"],
             deletedAt=d.get("deletedAt"),
         )

@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
-from typing import List, Literal, Optional
+from typing import Any, List, Literal, Optional
 
 from ..client import DeweyHttpClient
 from ..types import Collection
+
+# Sentinel used to distinguish "field not provided" from "set to None" for
+# nullable fields like llm_model and instructions.
+_UNSET: Any = object()
 
 
 class CollectionsResource:
@@ -54,8 +58,16 @@ class CollectionsResource:
         chunk_overlap: Optional[int] = None,
         embedding_model: Optional[str] = None,
         description: Optional[str] = None,
+        enable_summarization: Optional[bool] = None,
+        enable_captioning: Optional[bool] = None,
+        llm_model: Optional[str] = _UNSET,
+        instructions: Optional[str] = _UNSET,
     ) -> Collection:
-        """Update a collection."""
+        """Update a collection.
+
+        ``llm_model`` and ``instructions`` accept ``None`` to clear the field.
+        Omit the argument entirely to leave the field unchanged.
+        """
         body: dict = {}
         if name is not None:
             body["name"] = name
@@ -69,6 +81,14 @@ class CollectionsResource:
             body["embeddingModel"] = embedding_model
         if description is not None:
             body["description"] = description
+        if enable_summarization is not None:
+            body["enableSummarization"] = enable_summarization
+        if enable_captioning is not None:
+            body["enableCaptioning"] = enable_captioning
+        if llm_model is not _UNSET:
+            body["llmModel"] = llm_model
+        if instructions is not _UNSET:
+            body["instructions"] = instructions
         data = self._client.request("PATCH", f"/collections/{collection_id}", body=body)
         return Collection.from_dict(data)
 
