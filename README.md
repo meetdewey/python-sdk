@@ -60,6 +60,10 @@ DeweyClient(api_key: str, base_url: str = "https://api.meetdewey.com/v1")
 | `get(collection_id)` | Get by ID |
 | `update(collection_id, *, name, visibility, ...)` | Update |
 | `delete(collection_id)` | Delete |
+| `stats(collection_id)` | Document count, storage, section/chunk/claim counts |
+| `recompute_summaries(collection_id)` | Re-run AI section summarization |
+| `recompute_captions(collection_id)` | Re-run AI captioning for images and tables |
+| `recompute_claims(collection_id)` | Re-extract factual claims (clears existing) |
 
 `update()` accepts: `name`, `visibility`, `chunk_size`, `chunk_overlap`, `description`, `enable_summarization`, `enable_captioning`, `llm_model`, `instructions`. `llm_model` and `instructions` accept `None` to clear the field; omit them entirely to leave unchanged.
 
@@ -72,6 +76,10 @@ client.collections.update(
 
 # Clear instructions
 client.collections.update(collection_id, instructions=None)
+
+# Get collection statistics
+stats = client.collections.stats(collection_id)
+print(f"{stats.docCount} docs, {stats.totalClaimsCount} claims")
 ```
 
 ### `client.documents`
@@ -137,6 +145,57 @@ docs = client.documents.upload_many(collection_id, items)
 | `stream(collection_id, q, *, depth, model)` | SSE research → `Generator[ResearchEvent]` |
 
 `depth` options: `"quick"`, `"balanced"` (default), `"deep"`, `"exhaustive"`.
+
+### `client.claims`
+
+| Method | Description |
+|---|---|
+| `map_stream(collection_id)` | SSE stream of all claims with UMAP coordinates |
+| `list_by_document(document_id, *, min_importance)` | Claims extracted from a specific document |
+
+`map_stream()` yields raw event dicts. Check `event["type"]`: `"progress"`, `"done"` (with `claims` list), or `"error"`.
+
+```python
+from dewey.types import ClaimMapItem
+
+for event in client.claims.map_stream(collection_id):
+    if event["type"] == "done":
+        claims = [ClaimMapItem.from_dict(c) for c in event["claims"]]
+        for claim in claims:
+            print(f"[{claim.importance}] {claim.text}")
+
+# Per-document claims (fast, no SSE)
+result = client.claims.list_by_document(document_id, min_importance=3)
+for claim in result.claims:
+    print(claim.text)
+```
+
+### `client.contradictions`
+
+| Method | Description |
+|---|---|
+| `list(collection_id, *, severity, status, limit)` | List detected contradictions |
+| `detect(collection_id)` | Trigger async contradiction detection run |
+| `get_latest_run(collection_id)` | Poll status of the latest detection run |
+| `dismiss(collection_id, contradiction_id)` | Mark a contradiction as ignored |
+| `apply_instruction(collection_id, contradiction_id, instruction)` | Apply resolution; appends to collection instructions |
+
+```python
+# Trigger detection
+run = client.contradictions.detect(collection_id)
+print("Run ID:", run.runId)
+
+# Later: poll status
+status = client.contradictions.get_latest_run(collection_id)
+print(status.status, status.contradictionsFound)
+
+# List active contradictions and apply resolutions
+result = client.contradictions.list(collection_id, status="active")
+for c in result.items:
+    print(c.severity, c.explanation)
+    # Apply the suggested resolution
+    client.contradictions.apply_instruction(collection_id, c.id)
+```
 
 ### `client.provider_keys`
 
