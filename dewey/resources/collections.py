@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any, List, Literal, Optional
 
 from ..client import DeweyHttpClient
-from ..types import Collection
+from ..types import Collection, CollectionStats
 
 # Sentinel used to distinguish "field not provided" from "set to None" for
 # nullable fields like llm_model and instructions.
@@ -95,3 +95,20 @@ class CollectionsResource:
     def delete(self, collection_id: str) -> None:
         """Delete a collection (soft delete). Returns None on success."""
         self._client.request("DELETE", f"/collections/{collection_id}")
+
+    def stats(self, collection_id: str) -> CollectionStats:
+        """Get document count, storage, section/chunk/claim counts, and processing status breakdown."""
+        data = self._client.request("GET", f"/collections/{collection_id}/stats")
+        return CollectionStats.from_dict(data)
+
+    def recompute_summaries(self, collection_id: str) -> None:
+        """Re-run AI section summarization across all documents. Returns None on success."""
+        self._client.request("POST", f"/collections/{collection_id}/recompute/summaries")
+
+    def recompute_captions(self, collection_id: str) -> None:
+        """Re-run AI captioning for all images and tables across all documents. Returns None on success."""
+        self._client.request("POST", f"/collections/{collection_id}/recompute/captions")
+
+    def recompute_claims(self, collection_id: str) -> None:
+        """Re-extract factual claims from all documents. Clears existing claims first. Returns None on success."""
+        self._client.request("POST", f"/collections/{collection_id}/recompute/claims")

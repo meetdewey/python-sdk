@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List, Literal, Optional, Union
+from typing import Dict, List, Literal, Optional, Union
 
 
 # ── Collections ───────────────────────────────────────────────────────────────
@@ -323,6 +323,214 @@ def research_event_from_dict(d: dict) -> ResearchEvent:
     if t == "error":
         return ResearchEventError.from_dict(d)
     raise ValueError(f"Unknown research event type: {t!r}")
+
+
+# ── Claims ────────────────────────────────────────────────────────────────────
+
+
+@dataclass
+class ClaimMapItem:
+    id: str
+    text: str
+    documentId: str
+    documentName: str
+    sectionId: str
+    sectionTitle: str
+    importance: int
+    x: float
+    y: float
+    sourceText: Optional[str] = None
+
+    @staticmethod
+    def from_dict(d: dict) -> "ClaimMapItem":
+        return ClaimMapItem(
+            id=d["id"],
+            text=d["text"],
+            documentId=d["documentId"],
+            documentName=d["documentName"],
+            sectionId=d["sectionId"],
+            sectionTitle=d["sectionTitle"],
+            importance=d["importance"],
+            x=d["x"],
+            y=d["y"],
+            sourceText=d.get("sourceText"),
+        )
+
+
+ClaimMapEvent = Union[
+    # progress
+    dict,
+    # done / error — callers can check event["type"]
+]
+
+
+@dataclass
+class Claim:
+    id: str
+    sectionTitle: str
+    sectionLineage: str
+    text: str
+    importance: int
+    position: int
+
+    @staticmethod
+    def from_dict(d: dict) -> "Claim":
+        return Claim(
+            id=d["id"],
+            sectionTitle=d["sectionTitle"],
+            sectionLineage=d.get("sectionLineage", ""),
+            text=d["text"],
+            importance=d["importance"],
+            position=d["position"],
+        )
+
+
+@dataclass
+class DocumentClaims:
+    documentId: str
+    claims: List[Claim]
+
+    @staticmethod
+    def from_dict(d: dict) -> "DocumentClaims":
+        return DocumentClaims(
+            documentId=d["documentId"],
+            claims=[Claim.from_dict(c) for c in d.get("claims", [])],
+        )
+
+
+# ── Collection Stats ──────────────────────────────────────────────────────────
+
+
+@dataclass
+class CollectionStats:
+    docCount: int
+    totalFileSizeBytes: int
+    totalSections: int
+    totalChunks: int
+    statusCounts: Dict[str, int]
+    summarizedCount: int
+    captionedCount: int
+    claimsExtractedCount: int
+    totalClaimsCount: int
+
+    @staticmethod
+    def from_dict(d: dict) -> "CollectionStats":
+        return CollectionStats(
+            docCount=d["docCount"],
+            totalFileSizeBytes=d["totalFileSizeBytes"],
+            totalSections=d["totalSections"],
+            totalChunks=d["totalChunks"],
+            statusCounts=d.get("statusCounts", {}),
+            summarizedCount=d.get("summarizedCount", 0),
+            captionedCount=d.get("captionedCount", 0),
+            claimsExtractedCount=d.get("claimsExtractedCount", 0),
+            totalClaimsCount=d.get("totalClaimsCount", 0),
+        )
+
+
+# ── Contradictions ────────────────────────────────────────────────────────────
+
+
+@dataclass
+class ContradictionClaimRef:
+    id: str
+    text: str
+    sectionTitle: str
+    documentId: str
+    documentFilename: str
+
+    @staticmethod
+    def from_dict(d: dict) -> "ContradictionClaimRef":
+        doc = d.get("document", {})
+        return ContradictionClaimRef(
+            id=d["id"],
+            text=d["text"],
+            sectionTitle=d.get("sectionTitle", ""),
+            documentId=doc.get("id", ""),
+            documentFilename=doc.get("filename", ""),
+        )
+
+
+@dataclass
+class Contradiction:
+    id: str
+    severity: str
+    status: str
+    explanation: str
+    suggestedInstruction: Optional[str]
+    clusterTopicSummary: Optional[str]
+    createdAt: str
+    claims: List[ContradictionClaimRef]
+
+    @staticmethod
+    def from_dict(d: dict) -> "Contradiction":
+        return Contradiction(
+            id=d["id"],
+            severity=d["severity"],
+            status=d["status"],
+            explanation=d["explanation"],
+            suggestedInstruction=d.get("suggestedInstruction"),
+            clusterTopicSummary=d.get("clusterTopicSummary"),
+            createdAt=d["createdAt"],
+            claims=[ContradictionClaimRef.from_dict(c) for c in d.get("claims", [])],
+        )
+
+
+@dataclass
+class ContradictionList:
+    total: int
+    items: List[Contradiction]
+
+    @staticmethod
+    def from_dict(d: dict) -> "ContradictionList":
+        return ContradictionList(
+            total=d["total"],
+            items=[Contradiction.from_dict(c) for c in d.get("items", [])],
+        )
+
+
+@dataclass
+class ContradictionDetectResult:
+    runId: str
+    status: str
+    enqueuedAt: str
+
+    @staticmethod
+    def from_dict(d: dict) -> "ContradictionDetectResult":
+        return ContradictionDetectResult(
+            runId=d["runId"],
+            status=d["status"],
+            enqueuedAt=d["enqueuedAt"],
+        )
+
+
+@dataclass
+class ContradictionRun:
+    id: str
+    status: str
+    claimsProcessed: Optional[int]
+    clustersAnalyzed: Optional[int]
+    contradictionsFound: Optional[int]
+    model: Optional[str]
+    startedAt: Optional[str]
+    completedAt: Optional[str]
+    error: Optional[str]
+    createdAt: str
+
+    @staticmethod
+    def from_dict(d: dict) -> "ContradictionRun":
+        return ContradictionRun(
+            id=d["id"],
+            status=d["status"],
+            claimsProcessed=d.get("claimsProcessed"),
+            clustersAnalyzed=d.get("clustersAnalyzed"),
+            contradictionsFound=d.get("contradictionsFound"),
+            model=d.get("model"),
+            startedAt=d.get("startedAt"),
+            completedAt=d.get("completedAt"),
+            error=d.get("error"),
+            createdAt=d["createdAt"],
+        )
 
 
 # ── Provider Keys ─────────────────────────────────────────────────────────────

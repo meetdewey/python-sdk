@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from .client import DeweyError, DeweyHttpClient
+from .resources.claims import ClaimsResource
 from .resources.collections import CollectionsResource
+from .resources.contradictions import ContradictionsResource
 from .resources.documents import DocumentsResource
 from .resources.provider_keys import ProviderKeysResource
 from .resources.research import ResearchResource
@@ -12,8 +14,17 @@ from .resources.sections import SectionsResource
 from .resources.research import ResearchDepth
 from .types import (
     Chunk,
+    Claim,
+    ClaimMapItem,
     Collection,
+    CollectionStats,
+    Contradiction,
+    ContradictionClaimRef,
+    ContradictionDetectResult,
+    ContradictionList,
+    ContradictionRun,
     Document,
+    DocumentClaims,
     DocumentStatus,
     ProviderKey,
     ProviderName,
@@ -35,15 +46,26 @@ __all__ = [
     "DeweyClient",
     "DeweyError",
     # Resources
+    "ClaimsResource",
     "CollectionsResource",
+    "ContradictionsResource",
     "DocumentsResource",
     "SectionsResource",
     "RetrievalResource",
     "ResearchResource",
     "ProviderKeysResource",
     # Types
+    "Claim",
+    "ClaimMapItem",
     "Collection",
+    "CollectionStats",
+    "Contradiction",
+    "ContradictionClaimRef",
+    "ContradictionDetectResult",
+    "ContradictionList",
+    "ContradictionRun",
     "Document",
+    "DocumentClaims",
     "DocumentStatus",
     "Section",
     "Chunk",
@@ -95,3 +117,7 @@ class DeweyClient:
         self.research = ResearchResource(self._http)
         #: Manage provider API keys.
         self.provider_keys = ProviderKeysResource(self._http)
+        #: Access extracted claims and the claim map.
+        self.claims = ClaimsResource(self._http)
+        #: Detect and resolve contradictions across claims.
+        self.contradictions = ContradictionsResource(self._http)

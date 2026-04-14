@@ -122,6 +122,67 @@ class DeweyHttpClient:
                 pass
             raise DeweyError(status, message) from exc
 
+    def stream_sse_get(
+        self,
+        path: str,
+    ) -> Generator[dict, None, None]:
+        """
+        GET an SSE endpoint and yield parsed JSON event payloads.
+        Parses ``data: {...}\\n\\n`` lines using urllib (no third-party deps).
+        """
+        url = self._url(path)
+        headers = {
+            **self._auth_headers(),
+            "Accept": "text/event-stream",
+        }
+        req = urllib.request.Request(url, headers=headers, method="GET")
+
+        try:
+            resp = urllib.request.urlopen(req)
+        except urllib.error.HTTPError as exc:
+            status = exc.code
+            message = exc.reason
+            try:
+                raw = exc.read()
+                err_body = json.loads(raw)
+                message = err_body.get("message") or err_body.get("error") or message
+            except Exception:
+                pass
+            raise DeweyError(status, message) from exc
+
+        try:
+            buf = b""
+            while True:
+                chunk = resp.read(4096)
+                if not chunk:
+                    break
+                buf += chunk
+                while b"\n\n" in buf:
+                    message_bytes, buf = buf.split(b"\n\n", 1)
+                    for line in message_bytes.split(b"\n"):
+                        line_str = line.decode("utf-8")
+                        if line_str.startswith("data: "):
+                            payload = line_str[6:].strip()
+                            if payload == "[DONE]":
+                                return
+                            try:
+                                yield json.loads(payload)
+                            except json.JSONDecodeError:
+                                pass
+
+            if buf.strip():
+                for line in buf.split(b"\n"):
+                    line_str = line.decode("utf-8")
+                    if line_str.startswith("data: "):
+                        payload = line_str[6:].strip()
+                        if payload and payload != "[DONE]":
+                            try:
+                                yield json.loads(payload)
+                            except json.JSONDecodeError:
+                                pass
+        finally:
+            resp.close()
+
     def stream_sse(
         self,
         path: str,
