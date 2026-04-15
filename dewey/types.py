@@ -325,6 +325,21 @@ def research_event_from_dict(d: dict) -> ResearchEvent:
     raise ValueError(f"Unknown research event type: {t!r}")
 
 
+@dataclass
+class ResearchResult:
+    answer: str
+    sessionId: str
+    sources: List[ResearchSource]
+
+    @staticmethod
+    def from_dict(d: dict) -> "ResearchResult":
+        return ResearchResult(
+            answer=d["answer"],
+            sessionId=d["sessionId"],
+            sources=[ResearchSource.from_dict(s) for s in d.get("sources", [])],
+        )
+
+
 # ── Claims ────────────────────────────────────────────────────────────────────
 
 
