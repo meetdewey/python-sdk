@@ -67,10 +67,10 @@ class TestCollectionsResource:
 
     def test_create_posts_with_body(self):
         with mock_urlopen(COLLECTION, status=201) as mock_open:
-            make_resource().create("Docs")
+            make_resource().create("Docs", project_id="proj-1")
             req = mock_open.call_args[0][0]
             assert req.get_method() == "POST"
-            assert json.loads(req.data) == {"name": "Docs"}
+            assert json.loads(req.data) == {"name": "Docs", "projectId": "proj-1"}
 
     def test_update_patches_with_body(self):
         with mock_urlopen(COLLECTION) as mock_open:

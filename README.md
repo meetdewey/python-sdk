@@ -23,8 +23,8 @@ from dewey import DeweyClient
 
 client = DeweyClient(api_key="dwy_live_...")
 
-# Create a collection
-col = client.collections.create("My Docs")
+# Create a collection (project_id from your Dewey dashboard → Project Settings)
+col = client.collections.create("My Docs", project_id="proj_...")
 
 # Upload a document
 from pathlib import Path

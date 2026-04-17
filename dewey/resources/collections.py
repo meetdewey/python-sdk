@@ -20,13 +20,14 @@ class CollectionsResource:
         self,
         name: str,
         *,
+        project_id: str,
         visibility: Optional[Literal["private", "public"]] = None,
         chunk_size: Optional[int] = None,
         chunk_overlap: Optional[int] = None,
         embedding_model: Optional[str] = None,
     ) -> Collection:
         """Create a new collection."""
-        body: dict = {"name": name}
+        body: dict = {"name": name, "projectId": project_id}
         if visibility is not None:
             body["visibility"] = visibility
         if chunk_size is not None:
