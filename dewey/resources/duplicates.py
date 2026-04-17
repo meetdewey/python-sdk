@@ -1,8 +1,9 @@
 """Duplicates resource — fuzzy document deduplication.
 
-Identifies near-duplicate documents within a collection using MinHash
-signatures and marks one member of each cluster as canonical. Non-canonical
-documents are excluded from retrieval and contradiction detection.
+Identifies near-duplicate documents within a collection by measuring how much
+content they share and marks one member of each cluster as canonical.
+Non-canonical documents are excluded from retrieval and contradiction
+detection.
 
 Must be enabled per-collection via
 ``client.collections.update(id, enable_deduplication=True)``.
