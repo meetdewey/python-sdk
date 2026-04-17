@@ -7,6 +7,7 @@ from .resources.claims import ClaimsResource
 from .resources.collections import CollectionsResource
 from .resources.contradictions import ContradictionsResource
 from .resources.documents import DocumentsResource
+from .resources.duplicates import DuplicatesResource
 from .resources.provider_keys import ProviderKeysResource
 from .resources.research import ResearchResource
 from .resources.retrieval import RetrievalResource
@@ -26,6 +27,11 @@ from .types import (
     Document,
     DocumentClaims,
     DocumentStatus,
+    DuplicateDetectResult,
+    DuplicateGroup,
+    DuplicateGroupList,
+    DuplicateGroupMember,
+    DuplicateRun,
     ProviderKey,
     ProviderName,
     ResearchEvent,
@@ -51,6 +57,7 @@ __all__ = [
     "CollectionsResource",
     "ContradictionsResource",
     "DocumentsResource",
+    "DuplicatesResource",
     "SectionsResource",
     "RetrievalResource",
     "ResearchResource",
@@ -68,6 +75,11 @@ __all__ = [
     "Document",
     "DocumentClaims",
     "DocumentStatus",
+    "DuplicateDetectResult",
+    "DuplicateGroup",
+    "DuplicateGroupList",
+    "DuplicateGroupMember",
+    "DuplicateRun",
     "Section",
     "Chunk",
     "RetrievalResult",
@@ -123,3 +135,5 @@ class DeweyClient:
         self.claims = ClaimsResource(self._http)
         #: Detect and resolve contradictions across claims.
         self.contradictions = ContradictionsResource(self._http)
+        #: Detect and manage near-duplicate documents.
+        self.duplicates = DuplicatesResource(self._http)

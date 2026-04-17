@@ -197,6 +197,36 @@ for c in result.items:
     client.contradictions.apply_instruction(collection_id, c.id)
 ```
 
+### `client.duplicates`
+
+Fuzzy document deduplication. Identifies near-duplicate documents via MinHash signatures, marks one member of each cluster as canonical, and excludes near-duplicates from retrieval and contradiction detection. Must be enabled per-collection with `client.collections.update(id, enable_deduplication=True)`.
+
+| Method | Description |
+|---|---|
+| `detect(collection_id)` | Trigger async dedup run across all ready documents |
+| `get_latest_run(collection_id)` | Poll status of the latest dedup run |
+| `list(collection_id, *, limit, offset)` | List duplicate groups with members and coverage percentages |
+| `promote_canonical(collection_id, group_id, canonical_document_id)` | Promote a different member to canonical; old canonical becomes near_duplicate |
+| `disband(collection_id, group_id)` | Disband a group; all former members rejoin retrieval as distinct |
+
+```python
+# Enable on a collection (one-time)
+client.collections.update(collection_id, enable_deduplication=True)
+
+# Trigger detection, then poll
+run = client.duplicates.detect(collection_id)
+status = client.duplicates.get_latest_run(collection_id)
+print(status.status, status.duplicateGroupsCreated)
+
+# Review groups
+result = client.duplicates.list(collection_id)
+for group in result.items:
+    for m in group.members:
+        if m.relationship == "near_duplicate":
+            pct = round((m.coverageToCanonical or 0) * 100)
+            print(f"{m.filename} covers {pct}% of canonical")
+```
+
 ### `client.provider_keys`
 
 | Method | Description |

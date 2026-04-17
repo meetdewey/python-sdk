@@ -26,6 +26,9 @@ class Collection:
     lastSummarizationModel: Optional[str]
     lastCaptioningModel: Optional[str]
     instructions: Optional[str]
+    enableDeduplication: bool
+    lastDeduplicationAt: Optional[str]
+    duplicateGroupCount: int
     createdAt: str
     deletedAt: Optional[str]
 
@@ -47,6 +50,9 @@ class Collection:
             lastSummarizationModel=d.get("lastSummarizationModel"),
             lastCaptioningModel=d.get("lastCaptioningModel"),
             instructions=d.get("instructions"),
+            enableDeduplication=d.get("enableDeduplication", False),
+            lastDeduplicationAt=d.get("lastDeduplicationAt"),
+            duplicateGroupCount=d.get("duplicateGroupCount", 0),
             createdAt=d["createdAt"],
             deletedAt=d.get("deletedAt"),
         )
@@ -73,6 +79,10 @@ class Document:
     chunkCount: Optional[int]
     contentHash: Optional[str]
     errorMessage: Optional[str]
+    duplicateGroupId: Optional[str]
+    duplicateRelationship: Optional[Literal["canonical", "near_duplicate"]]
+    coverageToCanonical: Optional[float]
+    coverageFromCanonical: Optional[float]
     createdAt: str
 
     @staticmethod
@@ -90,6 +100,10 @@ class Document:
             chunkCount=d.get("chunkCount"),
             contentHash=d.get("contentHash"),
             errorMessage=d.get("errorMessage"),
+            duplicateGroupId=d.get("duplicateGroupId"),
+            duplicateRelationship=d.get("duplicateRelationship"),
+            coverageToCanonical=d.get("coverageToCanonical"),
+            coverageFromCanonical=d.get("coverageFromCanonical"),
             createdAt=d["createdAt"],
         )
 
@@ -570,5 +584,107 @@ class ProviderKey:
             provider=d["provider"],
             name=d["name"],
             keyPreview=d["keyPreview"],
+            createdAt=d["createdAt"],
+        )
+
+
+# ── Duplicates ────────────────────────────────────────────────────────────────
+
+
+@dataclass
+class DuplicateGroupMember:
+    id: str
+    filename: str
+    relationship: Optional[Literal["canonical", "near_duplicate"]]
+    coverageToCanonical: Optional[float]
+    coverageFromCanonical: Optional[float]
+    createdAt: str
+
+    @staticmethod
+    def from_dict(d: dict) -> "DuplicateGroupMember":
+        return DuplicateGroupMember(
+            id=d["id"],
+            filename=d["filename"],
+            relationship=d.get("relationship"),
+            coverageToCanonical=d.get("coverageToCanonical"),
+            coverageFromCanonical=d.get("coverageFromCanonical"),
+            createdAt=d["createdAt"],
+        )
+
+
+@dataclass
+class DuplicateGroup:
+    id: str
+    canonicalDocumentId: str
+    detectedAt: str
+    members: List[DuplicateGroupMember]
+
+    @staticmethod
+    def from_dict(d: dict) -> "DuplicateGroup":
+        return DuplicateGroup(
+            id=d["id"],
+            canonicalDocumentId=d["canonicalDocumentId"],
+            detectedAt=d["detectedAt"],
+            members=[
+                DuplicateGroupMember.from_dict(m) for m in d.get("members", [])
+            ],
+        )
+
+
+@dataclass
+class DuplicateGroupList:
+    total: int
+    items: List[DuplicateGroup]
+
+    @staticmethod
+    def from_dict(d: dict) -> "DuplicateGroupList":
+        return DuplicateGroupList(
+            total=d["total"],
+            items=[DuplicateGroup.from_dict(g) for g in d.get("items", [])],
+        )
+
+
+@dataclass
+class DuplicateDetectResult:
+    runId: str
+    status: str
+    jobsEnqueued: int
+    enqueuedAt: str
+
+    @staticmethod
+    def from_dict(d: dict) -> "DuplicateDetectResult":
+        return DuplicateDetectResult(
+            runId=d["runId"],
+            status=d["status"],
+            jobsEnqueued=d.get("jobsEnqueued", 0),
+            enqueuedAt=d["enqueuedAt"],
+        )
+
+
+@dataclass
+class DuplicateRun:
+    id: str
+    status: str
+    jobsEnqueued: Optional[int]
+    jobsProcessed: Optional[int]
+    duplicatesDetected: Optional[int]
+    duplicateGroupsCreated: Optional[int]
+    startedAt: Optional[str]
+    completedAt: Optional[str]
+    error: Optional[str]
+    createdAt: str
+
+    @staticmethod
+    def from_dict(d: dict) -> "DuplicateRun":
+        return DuplicateRun(
+            id=d["id"],
+            status=d["status"],
+            jobsEnqueued=d.get("jobsEnqueued"),
+            jobsProcessed=d.get("jobsProcessed"),
+            duplicatesDetected=d.get("duplicatesDetected"),
+            duplicateGroupsCreated=d.get("duplicateGroupsCreated"),
+            startedAt=d.get("startedAt"),
+            completedAt=d.get("completedAt"),
+            error=d.get("error"),
             createdAt=d["createdAt"],
         )

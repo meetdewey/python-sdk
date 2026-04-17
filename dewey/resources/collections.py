@@ -60,6 +60,7 @@ class CollectionsResource:
         description: Optional[str] = None,
         enable_summarization: Optional[bool] = None,
         enable_captioning: Optional[bool] = None,
+        enable_deduplication: Optional[bool] = None,
         llm_model: Optional[str] = _UNSET,
         instructions: Optional[str] = _UNSET,
     ) -> Collection:
@@ -85,6 +86,8 @@ class CollectionsResource:
             body["enableSummarization"] = enable_summarization
         if enable_captioning is not None:
             body["enableCaptioning"] = enable_captioning
+        if enable_deduplication is not None:
+            body["enableDeduplication"] = enable_deduplication
         if llm_model is not _UNSET:
             body["llmModel"] = llm_model
         if instructions is not _UNSET:
