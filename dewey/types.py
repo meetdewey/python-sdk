@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Literal, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, Union
 
 
 # ── Collections ───────────────────────────────────────────────────────────────
@@ -29,6 +29,7 @@ class Collection:
     enableDeduplication: bool
     lastDeduplicationAt: Optional[str]
     duplicateGroupCount: int
+    enableReranking: bool
     createdAt: str
     deletedAt: Optional[str]
 
@@ -53,6 +54,7 @@ class Collection:
             enableDeduplication=d.get("enableDeduplication", False),
             lastDeduplicationAt=d.get("lastDeduplicationAt"),
             duplicateGroupCount=d.get("duplicateGroupCount", 0),
+            enableReranking=d.get("enableReranking", True),
             createdAt=d["createdAt"],
             deletedAt=d.get("deletedAt"),
         )
@@ -83,6 +85,8 @@ class Document:
     duplicateRelationship: Optional[Literal["canonical", "near_duplicate"]]
     coverageToCanonical: Optional[float]
     coverageFromCanonical: Optional[float]
+    tags: List[str]
+    metadata: Dict[str, Any]
     createdAt: str
 
     @staticmethod
@@ -104,6 +108,8 @@ class Document:
             duplicateRelationship=d.get("duplicateRelationship"),
             coverageToCanonical=d.get("coverageToCanonical"),
             coverageFromCanonical=d.get("coverageFromCanonical"),
+            tags=d.get("tags", []),
+            metadata=d.get("metadata", {}),
             createdAt=d["createdAt"],
         )
 
@@ -688,3 +694,25 @@ class DuplicateRun:
             error=d.get("error"),
             createdAt=d["createdAt"],
         )
+
+
+# ── Tags ──────────────────────────────────────────────────────────────────────
+
+
+@dataclass
+class TagCount:
+    name: str
+    count: int
+
+    @staticmethod
+    def from_dict(d: dict) -> "TagCount":
+        return TagCount(name=d["name"], count=d["count"])
+
+
+@dataclass
+class TagsResponse:
+    tags: List[TagCount]
+
+    @staticmethod
+    def from_dict(d: dict) -> "TagsResponse":
+        return TagsResponse(tags=[TagCount.from_dict(t) for t in d.get("tags", [])])

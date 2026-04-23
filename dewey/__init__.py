@@ -46,6 +46,8 @@ from .types import (
     RetrievalResult,
     RetrievalSection,
     Section,
+    TagCount,
+    TagsResponse,
     UploadUrlResponse,
 )
 
@@ -96,6 +98,8 @@ __all__ = [
     "ResearchDepth",
     "ProviderKey",
     "ProviderName",
+    "TagCount",
+    "TagsResponse",
     "UploadUrlResponse",
 ]
 

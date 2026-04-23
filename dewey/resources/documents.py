@@ -3,15 +3,16 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
-from typing import IO, Callable, List, Optional, Union
+from typing import IO, Any, Callable, Dict, List, Optional, Union
 
 from ..client import DeweyHttpClient
-from ..types import Document, UploadUrlResponse
+from ..types import Document, TagsResponse, UploadUrlResponse
 
 FileInput = Union[Path, IO[bytes], bytes]
 
@@ -23,6 +24,8 @@ class UploadManyItem:
     file: FileInput
     filename: Optional[str] = None
     content_type: Optional[str] = None
+    tags: Optional[List[str]] = None
+    metadata: Optional[Dict[str, Any]] = None
 
 
 def _read_file(
@@ -66,6 +69,8 @@ class DocumentsResource:
         content_type: Optional[str] = None,
         content_hash: Optional[str] = None,
         name: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> Document:
         """
         Upload a document via multipart/form-data.
@@ -80,6 +85,10 @@ class DocumentsResource:
             extra_fields["name"] = name
         if content_hash:
             extra_fields["contentHash"] = content_hash
+        if tags is not None:
+            extra_fields["tags"] = json.dumps(tags)
+        if metadata is not None:
+            extra_fields["metadata"] = json.dumps(metadata)
 
         multipart = {
             **extra_fields,
@@ -104,14 +113,21 @@ class DocumentsResource:
         content_type: str,
         file_size_bytes: int,
         content_hash: str,
+        *,
+        tags: Optional[List[str]] = None,
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> UploadUrlResponse:
         """Request a presigned S3 upload URL."""
-        body = {
+        body: dict = {
             "filename": filename,
             "contentType": content_type,
             "fileSizeBytes": file_size_bytes,
             "contentHash": content_hash,
         }
+        if tags is not None:
+            body["tags"] = tags
+        if metadata is not None:
+            body["metadata"] = metadata
         data = self._client.request(
             "POST",
             f"/collections/{collection_id}/documents/upload-url",
@@ -119,13 +135,63 @@ class DocumentsResource:
         )
         return UploadUrlResponse.from_dict(data)
 
-    def confirm(self, collection_id: str, document_id: str) -> Document:
-        """Confirm a presigned upload and trigger ingestion."""
+    def confirm(
+        self,
+        collection_id: str,
+        document_id: str,
+        *,
+        tags: Optional[List[str]] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> Document:
+        """Confirm a presigned upload and trigger ingestion.
+        Optionally set tags and metadata at confirm time.
+        """
+        body: dict = {}
+        if tags is not None:
+            body["tags"] = tags
+        if metadata is not None:
+            body["metadata"] = metadata
         data = self._client.request(
             "POST",
             f"/collections/{collection_id}/documents/{document_id}/confirm",
+            body=body if body else None,
         )
         return Document.from_dict(data)
+
+    def update(
+        self,
+        collection_id: str,
+        document_id: str,
+        *,
+        tags: Optional[List[str]] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+        replace_metadata: bool = False,
+    ) -> Document:
+        """Update a document's tags and/or metadata.
+
+        By default metadata is shallow-merged with existing values.
+        Pass ``replace_metadata=True`` to replace it entirely.
+        """
+        body: dict = {}
+        if tags is not None:
+            body["tags"] = tags
+        if metadata is not None:
+            body["metadata"] = metadata
+        if replace_metadata:
+            body["replaceMetadata"] = True
+        data = self._client.request(
+            "PATCH",
+            f"/collections/{collection_id}/documents/{document_id}",
+            body=body,
+        )
+        return Document.from_dict(data)
+
+    def list_tags(self, collection_id: str) -> TagsResponse:
+        """List all tags used across documents in a collection, with counts."""
+        data = self._client.request(
+            "GET", f"/collections/{collection_id}/tags"
+        )
+        return TagsResponse.from_dict(data)
 
     def list(self, collection_id: str) -> List[Document]:
         """List all documents in a collection."""
@@ -200,6 +266,8 @@ class DocumentsResource:
                 content_type=content_type,
                 file_size_bytes=len(data),
                 content_hash=content_hash,
+                tags=item.tags,
+                metadata=item.metadata,
             )
 
             if url_resp.uploadUrl is None:

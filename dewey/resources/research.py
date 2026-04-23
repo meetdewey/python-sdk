@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Generator, Literal, Optional
+from typing import Any, Dict, Generator, List, Literal, Optional
 
 from ..client import DeweyHttpClient
 from ..types import ResearchEvent, ResearchResult, research_event_from_dict
@@ -21,6 +21,9 @@ class ResearchResource:
         *,
         depth: ResearchDepth = "balanced",
         model: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        any_tags: Optional[List[str]] = None,
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> Generator[ResearchEvent, None, None]:
         """
         Stream a research session using Server-Sent Events.
@@ -43,6 +46,12 @@ class ResearchResource:
         body: dict = {"q": q, "depth": depth}
         if model is not None:
             body["model"] = model
+        if tags is not None:
+            body["tags"] = tags
+        if any_tags is not None:
+            body["anyTags"] = any_tags
+        if metadata is not None:
+            body["metadata"] = metadata
 
         for raw in self._client.stream_sse(
             f"/collections/{collection_id}/research", body
@@ -56,6 +65,9 @@ class ResearchResource:
         *,
         depth: ResearchDepth = "balanced",
         model: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        any_tags: Optional[List[str]] = None,
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> ResearchResult:
         """
         Run a research query and return the complete answer as a single response.
@@ -70,6 +82,12 @@ class ResearchResource:
         body: dict = {"q": q, "depth": depth}
         if model is not None:
             body["model"] = model
+        if tags is not None:
+            body["tags"] = tags
+        if any_tags is not None:
+            body["anyTags"] = any_tags
+        if metadata is not None:
+            body["metadata"] = metadata
 
         raw = self._client.request(
             "POST", f"/collections/{collection_id}/research/sync", body=body

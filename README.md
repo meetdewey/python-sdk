@@ -65,7 +65,7 @@ DeweyClient(api_key: str, base_url: str = "https://api.meetdewey.com/v1")
 | `recompute_captions(collection_id)` | Re-run AI captioning for images and tables |
 | `recompute_claims(collection_id)` | Re-extract factual claims (clears existing) |
 
-`update()` accepts: `name`, `visibility`, `chunk_size`, `chunk_overlap`, `description`, `enable_summarization`, `enable_captioning`, `llm_model`, `instructions`. `llm_model` and `instructions` accept `None` to clear the field; omit them entirely to leave unchanged.
+`update()` accepts: `name`, `visibility`, `chunk_size`, `chunk_overlap`, `description`, `enable_summarization`, `enable_captioning`, `enable_reranking`, `enable_deduplication`, `llm_model`, `instructions`. `llm_model` and `instructions` accept `None` to clear the field; omit them entirely to leave unchanged.
 
 ```python
 # Set research instructions for a collection

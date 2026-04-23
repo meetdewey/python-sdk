@@ -92,6 +92,12 @@ class TestCollectionsResource:
             body = json.loads(mock_open.call_args[0][0].data)
             assert body == {"enableCaptioning": False}
 
+    def test_update_sends_enable_reranking(self):
+        with mock_urlopen(COLLECTION) as mock_open:
+            make_resource().update("col-1", enable_reranking=False)
+            body = json.loads(mock_open.call_args[0][0].data)
+            assert body == {"enableReranking": False}
+
     def test_update_sends_llm_model(self):
         with mock_urlopen(COLLECTION) as mock_open:
             make_resource().update("col-1", llm_model="gpt-4o")
