@@ -216,6 +216,99 @@ class DocumentsResource:
         """Delete a document. Returns None on success."""
         self._client.request("DELETE", f"/documents/{document_id}")
 
+    def batch_upload(
+        self,
+        collection_id: str,
+        files: List[Union[FileInput, "UploadManyItem"]],
+    ) -> List[Document]:
+        """Upload multiple files in a single multipart request.
+
+        Simpler than :meth:`upload_many` when files are small enough for one
+        HTTP request.  Each item can be a plain :class:`FileInput` or an
+        :class:`UploadManyItem` to supply per-file tags/metadata.
+        """
+        file_metadata: Dict[str, Any] = {}
+        file_parts: list = []
+
+        for item in files:
+            if not isinstance(item, UploadManyItem):
+                item = UploadManyItem(file=item)
+            data, filename, content_type = _read_file(
+                item.file, item.filename, item.content_type
+            )
+            file_parts.append(
+                {
+                    "field": "files",
+                    "data": data,
+                    "filename": filename,
+                    "content_type": content_type,
+                }
+            )
+            if item.tags is not None or item.metadata is not None:
+                entry: Dict[str, Any] = {}
+                if item.tags is not None:
+                    entry["tags"] = item.tags
+                if item.metadata is not None:
+                    entry["metadata"] = item.metadata
+                file_metadata[filename] = entry
+
+        extra_fields: Dict[str, str] = {}
+        if file_metadata:
+            extra_fields["fileMetadata"] = json.dumps(file_metadata)
+
+        result = self._client.request(
+            "POST",
+            f"/collections/{collection_id}/documents/batch",
+            multipart_many={"fields": extra_fields, "files": file_parts},
+        )
+        return [Document.from_dict(d) for d in result]
+
+    def batch_confirm(
+        self,
+        collection_id: str,
+        documents: List[Dict[str, Any]],
+    ) -> List[Document]:
+        """Confirm multiple pending documents and trigger ingestion.
+
+        Each entry in ``documents`` must have ``"id"`` and may optionally
+        include ``"tags"`` and ``"metadata"``.
+        """
+        result = self._client.request(
+            "POST",
+            f"/collections/{collection_id}/documents/batch-confirm",
+            body={"documents": documents},
+        )
+        return [Document.from_dict(d) for d in result]
+
+    def batch_delete(self, collection_id: str, ids: List[str]) -> None:
+        """Delete multiple documents in a single request."""
+        self._client.request(
+            "DELETE",
+            f"/collections/{collection_id}/documents/batch",
+            body={"ids": ids},
+        )
+
+    def retry_failed(self, collection_id: str) -> List[Document]:
+        """Re-queue all documents in error state in a collection."""
+        result = self._client.request(
+            "POST",
+            f"/collections/{collection_id}/documents/retry-failed",
+        )
+        return [Document.from_dict(d) for d in result]
+
+    def wait_for_ready(self, collection_id: str, document_id: str) -> Document:
+        """Long-poll until a document reaches ``ready`` or ``error`` status.
+
+        Times out after ~5.5 minutes; raises :class:`~dewey.client.DeweyError`
+        with status 408 if the document is still processing.
+        """
+        data = self._client.request(
+            "GET",
+            f"/documents/{document_id}/wait",
+            timeout=330,
+        )
+        return Document.from_dict(data)
+
     def upload_many(
         self,
         collection_id: str,

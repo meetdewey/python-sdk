@@ -46,7 +46,7 @@ def mock_urlopen_seq(responses: list[dict]):
     """Return a mock urlopen that cycles through a sequence of responses."""
     calls = iter(responses)
 
-    def _open(req):
+    def _open(req, **kwargs):
         cfg = next(calls)
         raw = json.dumps(cfg.get("body", {})).encode()
         resp = MagicMock()
@@ -162,7 +162,7 @@ class TestUploadMany:
         s3_resp.__enter__ = lambda s: s
         s3_resp.__exit__ = MagicMock(return_value=False)
 
-        def _open(req):
+        def _open(req, **kwargs):
             if "s3.example.com" in req.full_url:
                 return s3_resp
             raw = json.dumps(url_resp).encode()

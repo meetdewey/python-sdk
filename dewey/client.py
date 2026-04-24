@@ -53,6 +53,45 @@ def _build_multipart(
     return body, header
 
 
+def _build_multipart_many(
+    extra_fields: Dict[str, str],
+    files: list,
+) -> Tuple[bytes, str]:
+    """Build multipart/form-data with multiple files.
+
+    ``files`` is a list of dicts with keys: field, data, filename, content_type.
+    ``extra_fields`` are prepended as plain text parts (e.g. fileMetadata JSON).
+    Returns (body_bytes, content_type_header).
+    """
+    boundary = "----DeweyBoundary7MA4YWxkTrZu0gW"
+    lines: list[bytes] = []
+
+    for name, value in extra_fields.items():
+        lines.append(f"--{boundary}".encode())
+        lines.append(f'Content-Disposition: form-data; name="{name}"'.encode())
+        lines.append(b"")
+        lines.append(value.encode())
+
+    for f in files:
+        lines.append(f"--{boundary}".encode())
+        lines.append(
+            (
+                f'Content-Disposition: form-data; name="{f["field"]}";'
+                f' filename="{f["filename"]}"'
+            ).encode()
+        )
+        lines.append(f"Content-Type: {f['content_type']}".encode())
+        lines.append(b"")
+        lines.append(f["data"])
+
+    lines.append(f"--{boundary}--".encode())
+    lines.append(b"")
+
+    body = b"\r\n".join(lines)
+    header = f"multipart/form-data; boundary={boundary}"
+    return body, header
+
+
 class DeweyHttpClient:
     """Shared low-level HTTP client used by all resource classes."""
 
@@ -73,10 +112,16 @@ class DeweyHttpClient:
         *,
         body: Optional[Any] = None,
         multipart: Optional[Dict[str, Any]] = None,
+        multipart_many: Optional[Dict[str, Any]] = None,
+        timeout: Optional[float] = None,
     ) -> Any:
         """
         Make an HTTP request. Returns the parsed JSON body (or plain str for
         text responses, or None for 204).
+
+        ``multipart_many`` takes ``{ "fields": {str: str}, "files": [{field, data,
+        filename, content_type}, ...] }`` for multi-file uploads.
+        ``timeout`` sets the socket timeout in seconds (default: None = no timeout).
         """
         url = self._url(path)
         headers = self._auth_headers()
@@ -95,6 +140,13 @@ class DeweyHttpClient:
                 )
                 data = raw_body
                 headers["Content-Type"] = ct_header
+        elif multipart_many is not None:
+            raw_body, ct_header = _build_multipart_many(
+                extra_fields=multipart_many.get("fields", {}),
+                files=multipart_many.get("files", []),
+            )
+            data = raw_body
+            headers["Content-Type"] = ct_header
         elif body is not None:
             data = json.dumps(body).encode("utf-8")
             headers["Content-Type"] = "application/json"
@@ -102,7 +154,7 @@ class DeweyHttpClient:
         req = urllib.request.Request(url, data=data, headers=headers, method=method)
 
         try:
-            with urllib.request.urlopen(req) as resp:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
                 status = resp.status
                 if status == 204:
                     return None
