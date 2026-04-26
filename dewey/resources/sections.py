@@ -33,6 +33,9 @@ class SectionsResource:
         query: str,
         *,
         top_k: Optional[int] = None,
+        tags: Optional[List[str]] = None,
+        any_tags: Optional[List[str]] = None,
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         Full-text section scan — returns a ranked list of section matches.
@@ -43,6 +46,12 @@ class SectionsResource:
         body: dict = {"query": query}
         if top_k is not None:
             body["top_k"] = top_k
+        if tags is not None:
+            body["tags"] = tags
+        if any_tags is not None:
+            body["anyTags"] = any_tags
+        if metadata is not None:
+            body["metadata"] = metadata
         return self._client.request(
             "POST",
             f"/collections/{collection_id}/sections/scan",
