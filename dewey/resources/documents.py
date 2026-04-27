@@ -186,6 +186,25 @@ class DocumentsResource:
         )
         return Document.from_dict(data)
 
+    def bulk_update(
+        self,
+        collection_id: str,
+        documents: List[Dict[str, Any]],
+    ) -> List[Document]:
+        """Bulk-update tags and/or metadata for up to 500 documents.
+
+        Each entry in ``documents`` must have ``"id"`` and may optionally
+        include ``"tags"``, ``"metadata"``, and ``"replaceMetadata"``
+        (bool, default ``False``). Metadata is shallow-merged by default;
+        pass ``"replaceMetadata": True`` per item to replace it entirely.
+        """
+        result = self._client.request(
+            "PATCH",
+            f"/collections/{collection_id}/documents/bulk",
+            body={"documents": documents},
+        )
+        return [Document.from_dict(d) for d in result]
+
     def list_tags(self, collection_id: str) -> TagsResponse:
         """List all tags used across documents in a collection, with counts."""
         data = self._client.request(
