@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import IO, Any, Callable, Dict, List, Optional, Union
 
 from ..client import DeweyHttpClient
-from ..types import Document, TagsResponse, UploadUrlResponse
+from ..types import Document, DocumentSearchResult, TagsResponse, UploadUrlResponse
 
 FileInput = Union[Path, IO[bytes], bytes]
 
@@ -327,6 +327,36 @@ class DocumentsResource:
             timeout=330,
         )
         return Document.from_dict(data)
+
+    def search_documents(
+        self,
+        collection_id: str,
+        q: str,
+        *,
+        limit: Optional[int] = None,
+        tags: Optional[List[str]] = None,
+        any_tags: Optional[List[str]] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> List[DocumentSearchResult]:
+        """Fuzzy-search documents by filename using trigram similarity.
+
+        Returns documents ordered by similarity score (highest first).
+        """
+        body: dict = {"q": q}
+        if limit is not None:
+            body["limit"] = limit
+        if tags is not None:
+            body["tags"] = tags
+        if any_tags is not None:
+            body["anyTags"] = any_tags
+        if metadata is not None:
+            body["metadata"] = metadata
+        data = self._client.request(
+            "POST",
+            f"/collections/{collection_id}/documents/search",
+            body=body,
+        )
+        return [DocumentSearchResult.from_dict(r) for r in data]
 
     def upload_many(
         self,

@@ -248,6 +248,19 @@ class RetrievalResult:
         )
 
 
+@dataclass
+class DocumentSearchResult:
+    score: float
+    document: Document
+
+    @staticmethod
+    def from_dict(d: dict) -> "DocumentSearchResult":
+        return DocumentSearchResult(
+            score=d["score"],
+            document=Document.from_dict(d["document"]),
+        )
+
+
 # ── Research ──────────────────────────────────────────────────────────────────
 
 
