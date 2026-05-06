@@ -729,3 +729,201 @@ class TagsResponse:
     @staticmethod
     def from_dict(d: dict) -> "TagsResponse":
         return TagsResponse(tags=[TagCount.from_dict(t) for t in d.get("tags", [])])
+
+
+# ── Agents ────────────────────────────────────────────────────────────────────
+
+
+AgentToolName = Literal[
+    "search_collection",
+    "scan_sections",
+    "get_section_chunks",
+    "list_documents",
+    "get_document",
+]
+
+AgentRunStatus = Literal[
+    "running", "succeeded", "failed", "cancelled", "timeout"
+]
+
+AgentRunTerminalStatus = Literal["succeeded", "failed", "cancelled", "timeout"]
+
+
+@dataclass
+class AgentSource:
+    """One section-level citation surfaced by an agent run."""
+
+    chunkId: str
+    sectionId: str
+    sectionTitle: str
+    sectionLevel: int
+    documentId: str
+    filename: str
+    score: float
+    collectionId: str
+    collectionName: str
+
+    @staticmethod
+    def from_dict(d: dict) -> "AgentSource":
+        return AgentSource(
+            chunkId=d["chunkId"],
+            sectionId=d["sectionId"],
+            sectionTitle=d["sectionTitle"],
+            sectionLevel=d["sectionLevel"],
+            documentId=d["documentId"],
+            filename=d["filename"],
+            score=d["score"],
+            collectionId=d["collectionId"],
+            collectionName=d["collectionName"],
+        )
+
+
+@dataclass
+class AgentRunEventStarted:
+    type: Literal["run_started"]
+    runId: str
+
+    @staticmethod
+    def from_dict(d: dict) -> "AgentRunEventStarted":
+        return AgentRunEventStarted(type="run_started", runId=d["runId"])
+
+
+@dataclass
+class AgentRunEventToolCall:
+    type: Literal["tool_call"]
+    tool: AgentToolName
+    collectionId: str
+    args: dict
+    stepIndex: int
+
+    @staticmethod
+    def from_dict(d: dict) -> "AgentRunEventToolCall":
+        return AgentRunEventToolCall(
+            type="tool_call",
+            tool=d["tool"],
+            collectionId=d["collectionId"],
+            args=d.get("args", {}),
+            stepIndex=d["stepIndex"],
+        )
+
+
+@dataclass
+class AgentRunEventToolResult:
+    type: Literal["tool_result"]
+    tool: AgentToolName
+    summary: str
+    stepIndex: int
+
+    @staticmethod
+    def from_dict(d: dict) -> "AgentRunEventToolResult":
+        return AgentRunEventToolResult(
+            type="tool_result",
+            tool=d["tool"],
+            summary=d["summary"],
+            stepIndex=d["stepIndex"],
+        )
+
+
+@dataclass
+class AgentRunEventChunk:
+    type: Literal["chunk"]
+    content: str
+
+    @staticmethod
+    def from_dict(d: dict) -> "AgentRunEventChunk":
+        return AgentRunEventChunk(type="chunk", content=d["content"])
+
+
+@dataclass
+class AgentRunEventDone:
+    type: Literal["done"]
+    runId: str
+    status: AgentRunTerminalStatus
+    response: str
+    iterationsUsed: int
+    sources: List[AgentSource]
+
+    @staticmethod
+    def from_dict(d: dict) -> "AgentRunEventDone":
+        return AgentRunEventDone(
+            type="done",
+            runId=d["runId"],
+            status=d["status"],
+            response=d["response"],
+            iterationsUsed=d["iterationsUsed"],
+            sources=[AgentSource.from_dict(s) for s in d.get("sources", [])],
+        )
+
+
+@dataclass
+class AgentRunEventError:
+    type: Literal["error"]
+    message: str
+    code: Optional[str] = None
+
+    @staticmethod
+    def from_dict(d: dict) -> "AgentRunEventError":
+        return AgentRunEventError(
+            type="error", message=d["message"], code=d.get("code")
+        )
+
+
+@dataclass
+class AgentRunEventWarning:
+    type: Literal["warning"]
+    message: str
+
+    @staticmethod
+    def from_dict(d: dict) -> "AgentRunEventWarning":
+        return AgentRunEventWarning(type="warning", message=d["message"])
+
+
+AgentRunEvent = Union[
+    AgentRunEventStarted,
+    AgentRunEventToolCall,
+    AgentRunEventToolResult,
+    AgentRunEventChunk,
+    AgentRunEventDone,
+    AgentRunEventError,
+    AgentRunEventWarning,
+]
+
+
+def agent_run_event_from_dict(d: dict) -> AgentRunEvent:
+    t = d.get("type")
+    if t == "run_started":
+        return AgentRunEventStarted.from_dict(d)
+    if t == "tool_call":
+        return AgentRunEventToolCall.from_dict(d)
+    if t == "tool_result":
+        return AgentRunEventToolResult.from_dict(d)
+    if t == "chunk":
+        return AgentRunEventChunk.from_dict(d)
+    if t == "done":
+        return AgentRunEventDone.from_dict(d)
+    if t == "error":
+        return AgentRunEventError.from_dict(d)
+    if t == "warning":
+        return AgentRunEventWarning.from_dict(d)
+    raise ValueError(f"Unknown agent run event type: {t!r}")
+
+
+@dataclass
+class AgentInvokeResult:
+    """Buffered response shape returned by POST /invoke/sync."""
+
+    runId: str
+    response: str
+    sources: List[AgentSource]
+    status: AgentRunTerminalStatus
+    warnings: Optional[List[str]] = None
+
+    @staticmethod
+    def from_dict(d: dict) -> "AgentInvokeResult":
+        return AgentInvokeResult(
+            runId=d["runId"],
+            response=d["response"],
+            sources=[AgentSource.from_dict(s) for s in d.get("sources", [])],
+            status=d["status"],
+            warnings=d.get("warnings"),
+        )

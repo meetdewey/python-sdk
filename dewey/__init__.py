@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from .client import DeweyError, DeweyHttpClient
+from .resources.agents import AgentsResource
 from .resources.claims import ClaimsResource
 from .resources.collections import CollectionsResource
 from .resources.contradictions import ContradictionsResource
@@ -14,6 +15,19 @@ from .resources.retrieval import RetrievalResource
 from .resources.sections import SectionsResource
 from .resources.research import ResearchDepth
 from .types import (
+    AgentInvokeResult,
+    AgentRunEvent,
+    AgentRunEventChunk,
+    AgentRunEventDone,
+    AgentRunEventError,
+    AgentRunEventStarted,
+    AgentRunEventToolCall,
+    AgentRunEventToolResult,
+    AgentRunEventWarning,
+    AgentRunStatus,
+    AgentRunTerminalStatus,
+    AgentSource,
+    AgentToolName,
     Chunk,
     Claim,
     ClaimMapItem,
@@ -56,6 +70,7 @@ __all__ = [
     "DeweyClient",
     "DeweyError",
     # Resources
+    "AgentsResource",
     "ClaimsResource",
     "CollectionsResource",
     "ContradictionsResource",
@@ -66,6 +81,19 @@ __all__ = [
     "ResearchResource",
     "ProviderKeysResource",
     # Types
+    "AgentInvokeResult",
+    "AgentRunEvent",
+    "AgentRunEventChunk",
+    "AgentRunEventDone",
+    "AgentRunEventError",
+    "AgentRunEventStarted",
+    "AgentRunEventToolCall",
+    "AgentRunEventToolResult",
+    "AgentRunEventWarning",
+    "AgentRunStatus",
+    "AgentRunTerminalStatus",
+    "AgentSource",
+    "AgentToolName",
     "Claim",
     "ClaimMapItem",
     "Collection",
@@ -121,7 +149,7 @@ class DeweyClient:
     def __init__(
         self,
         api_key: str,
-        base_url: str = "https://api.meetdewey.com",
+        base_url: str = "https://api.meetdewey.com/v1",
     ) -> None:
         self._http = DeweyHttpClient(api_key=api_key, base_url=base_url)
 
@@ -143,3 +171,5 @@ class DeweyClient:
         self.contradictions = ContradictionsResource(self._http)
         #: Detect and manage near-duplicate documents.
         self.duplicates = DuplicatesResource(self._http)
+        #: Invoke saved agents (streaming and sync).
+        self.agents = AgentsResource(self._http)
