@@ -146,6 +146,38 @@ docs = client.documents.upload_many(collection_id, items)
 
 `depth` options: `"quick"`, `"balanced"` (default), `"deep"`, `"exhaustive"`.
 
+### `client.agents`
+
+Invoke saved agents defined in the dashboard. `org_id` and `project_id` are UUIDs (not slugs); `agent_slug` is the human-readable slug shown in dashboard URLs (e.g. `"qa-test"`).
+
+| Method | Description |
+|---|---|
+| `invoke_sync(org_id, project_id, agent_slug, *, query)` | Buffered run → `AgentInvokeResult` |
+| `stream(org_id, project_id, agent_slug, *, query)` | SSE run → `Generator[AgentRunEvent]` |
+
+```python
+# Buffered — returns once the run terminates
+result = client.agents.invoke_sync(
+    org_id, project_id, "qa-test",
+    query="What changed in 2023?",
+)
+print(result.response)
+for s in result.sources:
+    print(f"- {s.filename} § {s.sectionTitle}")
+
+# Streaming — yields tool calls, tokens, and the final done event
+for event in client.agents.stream(
+    org_id, project_id, "qa-test",
+    query="What changed in 2023?",
+):
+    if event.type == "chunk":
+        print(event.content, end="", flush=True)
+    elif event.type == "done":
+        print(f"\n{len(event.sources)} sources")
+```
+
+`AgentRunEvent` is a tagged union: `AgentRunEventStarted`, `AgentRunEventToolCall`, `AgentRunEventToolResult`, `AgentRunEventChunk`, `AgentRunEventDone`, `AgentRunEventError`, `AgentRunEventWarning`. Match on `event.type` to discriminate.
+
 ### `client.claims`
 
 | Method | Description |
