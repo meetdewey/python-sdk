@@ -538,6 +538,32 @@ class ContradictionList:
 
 
 @dataclass
+class ContradictionFile:
+    documentId: str
+    filename: str
+    contradictionCount: int
+
+    @staticmethod
+    def from_dict(d: dict) -> "ContradictionFile":
+        return ContradictionFile(
+            documentId=d["documentId"],
+            filename=d["filename"],
+            contradictionCount=d["contradictionCount"],
+        )
+
+
+@dataclass
+class ContradictionFileList:
+    files: List[ContradictionFile]
+
+    @staticmethod
+    def from_dict(d: dict) -> "ContradictionFileList":
+        return ContradictionFileList(
+            files=[ContradictionFile.from_dict(f) for f in d.get("files", [])],
+        )
+
+
+@dataclass
 class ContradictionDetectResult:
     runId: str
     status: str

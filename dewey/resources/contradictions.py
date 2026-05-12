@@ -8,6 +8,7 @@ from ..client import DeweyHttpClient
 from ..types import (
     Contradiction,
     ContradictionDetectResult,
+    ContradictionFileList,
     ContradictionList,
     ContradictionRun,
 )
@@ -23,6 +24,7 @@ class ContradictionsResource:
         *,
         severity: Optional[Literal["low", "medium", "high"]] = None,
         status: Optional[Literal["active", "dismissed", "applied"]] = None,
+        document_id: Optional[str] = None,
         limit: Optional[int] = None,
     ) -> ContradictionList:
         """
@@ -31,6 +33,8 @@ class ContradictionsResource:
         :param collection_id: The collection ID.
         :param severity: Filter by severity level.
         :param status: Filter by resolution status. Defaults to ``"active"``.
+        :param document_id: Only return contradictions whose claims touch this
+            document (useful for drilling into a single file).
         :param limit: Maximum results to return (1–100).
         """
         params: list[str] = []
@@ -38,6 +42,8 @@ class ContradictionsResource:
             params.append(f"severity={severity}")
         if status is not None:
             params.append(f"status={status}")
+        if document_id is not None:
+            params.append(f"documentId={document_id}")
         if limit is not None:
             params.append(f"limit={limit}")
         qs = "&".join(params)
@@ -46,6 +52,33 @@ class ContradictionsResource:
             path += f"?{qs}"
         data = self._client.request("GET", path)
         return ContradictionList.from_dict(data)
+
+    def list_files(
+        self,
+        collection_id: str,
+        *,
+        status: Optional[Literal["active", "dismissed", "applied"]] = None,
+        severity: Optional[Literal["low", "medium", "high"]] = None,
+    ) -> ContradictionFileList:
+        """
+        List the files (documents) that have at least one claim participating
+        in a contradiction, with a per-document count. Sorted by count
+        descending, then filename ascending.
+
+        :param status: Restrict the count to one status. Defaults to ``"active"``.
+        :param severity: Restrict the count to one severity.
+        """
+        params: list[str] = []
+        if status is not None:
+            params.append(f"status={status}")
+        if severity is not None:
+            params.append(f"severity={severity}")
+        qs = "&".join(params)
+        path = f"/collections/{collection_id}/contradictions/files"
+        if qs:
+            path += f"?{qs}"
+        data = self._client.request("GET", path)
+        return ContradictionFileList.from_dict(data)
 
     def detect(self, collection_id: str) -> ContradictionDetectResult:
         """
